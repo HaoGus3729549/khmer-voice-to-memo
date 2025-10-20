@@ -98,19 +98,23 @@ export default function AudioPlayer({ blob, title = "Audio" }) {
 
   const handleProgressClick = (e) => {
     if (!audioRef.current || !progressRef.current) return;
+    if (!duration || !Number.isFinite(duration)) return; // Guard against invalid duration
     
     const rect = progressRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const width = rect.width;
-    const newTime = (clickX / width) * duration;
+    const newTime = Math.max(0, Math.min((clickX / width) * duration, duration));
     
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
+    if (Number.isFinite(newTime)) {
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
   };
 
   // handle the progress bar mouse down event
   const handleProgressMouseDown = (e) => {
     if (!audioRef.current || !progressRef.current) return;
+    if (!duration || !Number.isFinite(duration)) return; // Guard against invalid duration
     
     const handleMouseMove = (e) => {
       const rect = progressRef.current.getBoundingClientRect();
@@ -118,8 +122,10 @@ export default function AudioPlayer({ blob, title = "Audio" }) {
       const width = rect.width;
       const newTime = Math.max(0, Math.min((clickX / width) * duration, duration));
       
-      audioRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
+      if (Number.isFinite(newTime)) {
+        audioRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
+      }
     };
     
     const handleMouseUp = () => {

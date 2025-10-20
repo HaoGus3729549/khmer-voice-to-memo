@@ -14,8 +14,6 @@ function formatDuration(ms) {
 }
 
 function formatDate(ts) {
-  // Use English locale for international compatibility
-  // Format: Jan 20, 2025, 4:30:45 PM
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
