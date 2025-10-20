@@ -14,14 +14,27 @@ function formatDuration(ms) {
 }
 
 function formatDate(ts) {
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(new Date(ts));
+  // Try Khmer locale first, fallback to English
+  try {
+    return new Intl.DateTimeFormat("km-KH", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(new Date(ts));
+  } catch (error) {
+    // Fallback to English if Khmer locale is not available
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(new Date(ts));
+  }
 }
 
 function pickMime() {
@@ -327,15 +340,34 @@ export default function App() {
                   const a = document.createElement("a");
                   const ext = m.mime?.includes("ogg") ? "ogg" : "webm";
                   a.href = url;
-                  a.download = `memo_${new Date(m.created)
+                  a.download = `memo_audio_${new Date(m.created)
                     .toISOString()
                     .replace(/[:.]/g, "-")}.${ext}`;
                   a.click();
                   setTimeout(() => URL.revokeObjectURL(url), 1000);
                 }}
               >
-                ⬇ Download
+                🎵 Audio
               </button>
+              {m.transcript && (
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    const content = `Memo Transcript\n\nDate: ${formatDate(m.created)}\nDuration: ${formatDuration(m.durationMs)}\n\nTranscription:\n${m.transcript}`;
+                    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `memo_transcript_${new Date(m.created)
+                      .toISOString()
+                      .replace(/[:.]/g, "-")}.txt`;
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  }}
+                >
+                  📝 Text
+                </button>
+              )}
               <button className="btn btn-secondary" onClick={() => del(m.id)}>
                 🗑 Delete
               </button>
