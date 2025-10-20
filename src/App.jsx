@@ -196,7 +196,17 @@ export default function App() {
     const blob = new Blob(chunksRef.current, { type: usedMimeRef.current });
     chunksRef.current = [];
 
-    const durationMs = Math.max(0, Date.now() - (startRef.current || Date.now()));
+    // Get actual audio duration from the blob
+    let durationMs = Math.max(0, Date.now() - (startRef.current || Date.now()));
+    try {
+      const arrayBuffer = await blob.arrayBuffer();
+      const tempCtx = new AudioContext();
+      const audioBuffer = await tempCtx.decodeAudioData(arrayBuffer);
+      durationMs = audioBuffer.duration * 1000;
+      await tempCtx.close();
+    } catch (e) {
+      console.warn('Failed to decode audio for duration, using timer fallback:', e);
+    }
 
     const rec = {
       id: crypto.randomUUID(),
