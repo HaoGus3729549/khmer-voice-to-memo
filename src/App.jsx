@@ -14,27 +14,17 @@ function formatDuration(ms) {
 }
 
 function formatDate(ts) {
-  // Try Khmer locale first, fallback to English
-  try {
-    return new Intl.DateTimeFormat("km-KH", {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    }).format(new Date(ts));
-  } catch (error) {
-    // Fallback to English if Khmer locale is not available
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    }).format(new Date(ts));
-  }
+  // Use English locale for international compatibility
+  // Format: Jan 20, 2025, 4:30:45 PM
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  }).format(new Date(ts));
 }
 
 function pickMime() {
