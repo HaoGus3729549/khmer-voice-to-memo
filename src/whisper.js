@@ -9,12 +9,27 @@ env.useCustomCache = false;
 // Custom fetch function to handle asset loading errors
 const realFetch = (typeof window !== 'undefined' ? window.fetch : fetch);
 env.fetch = async (url, init) => {
-  const res = await realFetch(url, init);
-  const ct = res.headers.get('content-type') || '';
-  if (!res.ok || ct.startsWith('text/html')) {
-    console.error('[Whisper assets] unexpected response', { url, status: res.status, contentType: ct });
+  console.log('[Whisper] Fetching:', url);
+  try {
+    const res = await realFetch(url, init);
+    const ct = res.headers.get('content-type') || '';
+    
+    // Check if we got HTML instead of JSON/binary
+    if (!res.ok || ct.startsWith('text/html')) {
+      console.error('[Whisper assets] Network error - received HTML instead of model file', { 
+        url, 
+        status: res.status, 
+        contentType: ct 
+      });
+      throw new Error(`Network error: Cannot load model from ${url}. Please check your internet connection or try again later.`);
+    }
+    
+    console.log('[Whisper] Successfully fetched:', url);
+    return res;
+  } catch (error) {
+    console.error('[Whisper] Fetch failed:', error);
+    throw error;
   }
-  return res;
 };
 
 let _asr = null;
