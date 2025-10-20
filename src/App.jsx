@@ -116,7 +116,7 @@ export default function App() {
         created: Date.now(),
         durationMs,
         mime: uploadFile.type,
-        blob: new Blob([arrayBuffer], { type: uploadFile.type }),
+        blob: uploadFile, // directly use the original file, don't re-create Blob
         transcript: result || "",
       };
       

@@ -108,6 +108,32 @@ export default function AudioPlayer({ blob, title = "Audio" }) {
     setCurrentTime(newTime);
   };
 
+  // handle the progress bar mouse down event
+  const handleProgressMouseDown = (e) => {
+    if (!audioRef.current || !progressRef.current) return;
+    
+    const handleMouseMove = (e) => {
+      const rect = progressRef.current.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;
+      const newTime = Math.max(0, Math.min((clickX / width) * duration, duration));
+      
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    };
+    
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    // immediately handle the click position
+    handleMouseMove(e);
+  };
+
   const handleVolumeChange = (e) => {
     const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);
@@ -168,13 +194,15 @@ export default function AudioPlayer({ blob, title = "Audio" }) {
             className="grow" 
             ref={progressRef}
             onClick={handleProgressClick}
+            onMouseDown={handleProgressMouseDown}
             style={{
               height: '8px',
               background: '#e9ecef',
               borderRadius: '4px',
               cursor: 'pointer',
               position: 'relative',
-              margin: '0 8px'
+              margin: '0 8px',
+              userSelect: 'none'
             }}
           >
             <div
