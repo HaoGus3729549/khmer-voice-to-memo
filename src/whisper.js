@@ -17,31 +17,40 @@ env.fetch = async (url, init) => {
   return res;
 };
 
-let asr = null;
+let _asr = null;
+let _loadingPromise = null;
 
 async function getASR() {
-  if (asr) return asr;
+  if (_asr) return _asr;
   
+  // Prevent multiple simultaneous loading attempts
+  if (_loadingPromise) return _loadingPromise;
+  
+  _loadingPromise = loadModel();
+  return _loadingPromise;
+}
+
+async function loadModel() {
   try {
     // Ensure transformers is properly initialized
     if (typeof window !== 'undefined') {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     
-    asr = await pipeline('automatic-speech-recognition', 'seanghay/whisper-small-khmer', { 
+    _asr = await pipeline('automatic-speech-recognition', 'seanghay/whisper-small-khmer', { 
       quantized: true,
       progress_callback: (progress) => {
         console.log('[Khmer STT] Loading progress:', Math.round(progress.progress * 100) + '%');
       }
     });
+    return _asr;
   } catch (error) {
     console.warn('[Khmer STT] Failed to load seanghay/whisper-small-khmer, trying fallback...', error);
-    asr = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', { 
+    _asr = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', { 
       quantized: true 
     });
+    return _asr;
   }
-  
-  return asr;
 }
 
 class RingBuffer {

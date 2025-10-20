@@ -62,12 +62,12 @@ export default function App() {
 
   const handleFileUpload = useCallback(async (file) => {
     if (!file.type.startsWith("audio/")) {
-      setUploadProgress("请选择音频文件");
+      setUploadProgress("Please select an audio file");
       return;
     }
     
     setUploadFile(file);
-    setUploadProgress("文件已选择");
+    setUploadProgress("File selected");
     
     const arrayBuffer = await file.arrayBuffer();
     const ctx = new AudioContext();
@@ -75,28 +75,28 @@ export default function App() {
     const durationMs = audioBuffer.duration * 1000;
     await ctx.close();
     
-    setUploadProgress(`文件已选择 - ${formatDuration(durationMs)}`);
+    setUploadProgress(`File selected - ${formatDuration(durationMs)}`);
   }, []);
 
   const processUploadedFile = useCallback(async () => {
     if (!uploadFile) return;
     
     try {
-      setUploadProgress("解码中...");
+      setUploadProgress("Decoding...");
       const arrayBuffer = await uploadFile.arrayBuffer();
       const ctx = new AudioContext();
       const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
       
-      setUploadProgress("处理音频...");
+      setUploadProgress("Processing audio...");
       const mono = downmixToMono(audioBuffer.getChannelData(0));
       const resampled = resampleTo16k(mono, audioBuffer.sampleRate);
       
-      setUploadProgress("转录中...");
+      setUploadProgress("Transcribing...");
       const streamer = await createWhisperStreamer({ sampleRate: 16000 });
       streamer.accept(resampled);
       const result = await streamer.finish();
       
-      setUploadProgress("保存中...");
+      setUploadProgress("Saving...");
       const durationMs = audioBuffer.duration * 1000;
       const rec = {
         id: crypto.randomUUID(),
@@ -112,10 +112,10 @@ export default function App() {
       await ctx.close();
       
       setUploadFile(null);
-      setUploadProgress("完成");
+      setUploadProgress("Completed");
     } catch (error) {
       console.error("Upload processing error:", error);
-      setUploadProgress(`处理失败: ${error.message || "未知错误"}`);
+      setUploadProgress(`Processing failed: ${error.message || "Unknown error"}`);
       setUploadFile(null);
     }
   }, [uploadFile, load]);
@@ -138,7 +138,7 @@ export default function App() {
 
     startRef.current = Date.now();
     setRecording(true);
-    setStatus("Recording — starting STT…");
+    setStatus("Recording — starting STT...");
     intRef.current = setInterval(
       () => setTimer(Date.now() - startRef.current),
       250
@@ -169,7 +169,7 @@ export default function App() {
   }, []);
 
   const stop = useCallback(async () => {
-    setStatus("Saving…");
+    setStatus("Saving...");
     if (intRef.current) clearInterval(intRef.current);
     setTimer(0);
     setRecording(false);
@@ -280,7 +280,7 @@ export default function App() {
           {!uploadFile ? (
             <div className="upload-area" onClick={() => document.getElementById('fileInput').click()}>
               <div>Click to select audio file</div>
-              <div className="upload-hint">支持格式: WAV, MP3, OGG, WEBM</div>
+              <div className="upload-hint">Supported formats: WAV, MP3, OGG, WEBM</div>
               <input
                 id="fileInput"
                 type="file"
