@@ -24,14 +24,6 @@ npm run dev
 npm run build
 ```
 
-## ⚠️ Important Notes
-
-### Port Configuration
-- **Default port is locked to 3004** to maintain IndexedDB data consistency
-- IndexedDB data is isolated per Origin (protocol + domain + port)
-- Changing the port will result in a fresh database with no previous memos
-- If you need to access your existing data, always use port 3004
-
 ### Network Requirements
 - Requires internet connection for first-time model download (~50MB)
 - Model is cached locally after first load
