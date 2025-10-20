@@ -31,25 +31,51 @@ async function getASR() {
 }
 
 async function loadModel() {
+  console.time('[khmer-whisper] load');
+  
   try {
     // Ensure transformers is properly initialized
     if (typeof window !== 'undefined') {
+      // Wait a bit for the library to fully initialize
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     
-    _asr = await pipeline('automatic-speech-recognition', 'seanghay/whisper-small-khmer', { 
-      quantized: true,
-      progress_callback: (progress) => {
-        console.log('[Khmer STT] Loading progress:', Math.round(progress.progress * 100) + '%');
+    // Try the Khmer Whisper model first
+    _asr = await pipeline(
+      'automatic-speech-recognition',
+      'seanghay/whisper-small-khmer',
+      { 
+        quantized: true,
+        progress_callback: (progress) => {
+          console.log('[Khmer STT] Loading progress:', Math.round(progress.progress * 100) + '%');
+        }
       }
-    });
+    );
+    console.timeEnd('[khmer-whisper] load');
+    console.log('[Khmer STT] Model loaded successfully');
     return _asr;
   } catch (error) {
     console.warn('[Khmer STT] Failed to load seanghay/whisper-small-khmer, trying fallback...', error);
-    _asr = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', { 
-      quantized: true 
-    });
-    return _asr;
+    
+    // Fallback to generic Whisper with language specification
+    try {
+      _asr = await pipeline(
+        'automatic-speech-recognition',
+        'Xenova/whisper-tiny',
+        { 
+          quantized: true,
+          progress_callback: (progress) => {
+            console.log('[Khmer STT] Fallback loading progress:', Math.round(progress.progress * 100) + '%');
+          }
+        }
+      );
+      console.timeEnd('[khmer-whisper] load');
+      console.log('[Khmer STT] Fallback model loaded');
+      return _asr;
+    } catch (fallbackError) {
+      console.error('[Khmer STT] Both models failed to load', fallbackError);
+      throw new Error('Failed to load any speech recognition model');
+    }
   }
 }
 
@@ -88,39 +114,37 @@ class RingBuffer {
 }
 
 export async function createWhisperStreamer({ sampleRate = 16000, onPartial } = {}) {
-  const model = await getASR();
-  const partial = new RingBuffer(sampleRate * 8);
-  const all = [];
-  let busy = false;
+  const asr = await getASR();
 
+  // Configuration: Keep last 8 seconds for partial transcription
+  const PARTIAL_S = 8;
+  const partial = new RingBuffer(sampleRate * PARTIAL_S);
+  const all = [];  // Store all audio for final transcription
+  let busy = false, pending = false;
+
+  // Run transcription on the recent audio buffer (non-blocking)
   const runPartial = async () => {
-    if (busy) return;
+    if (busy) { pending = true; return; }
     busy = true;
-    const audio = partial.tail(sampleRate * 8);
-    if (audio.length > sampleRate * 1.2) {
-      try {
-        const res = await model(audio, { 
-          language: "km", 
+    try {
+      const audio = partial.tail(sampleRate * PARTIAL_S);
+      if (audio.length > sampleRate * 1.2) {  // At least 1.2 seconds
+        const res = await asr(audio, {
+          language: "km",  // Khmer language code
           task: "transcribe",
           chunk_length_s: 15,
-          stride_length_s: 5
+          stride_length_s: 5,
+          return_timestamps: false,
         });
         onPartial?.(res?.text || '');
-      } catch (error) {
-        try {
-          const res = await model(audio, { 
-            language: "en", 
-            task: "transcribe",
-            chunk_length_s: 15,
-            stride_length_s: 5
-          });
-          onPartial?.(res?.text || '');
-        } catch (fallbackError) {
-          // 静默处理错误
-        }
       }
+    } catch (e) {
+      console.warn('[Khmer STT] Partial transcription error:', e);
+    } 
+    finally {
+      busy = false;
+      if (pending) { pending = false; runPartial(); }
     }
-    busy = false;
   };
 
   return {
@@ -131,35 +155,23 @@ export async function createWhisperStreamer({ sampleRate = 16000, onPartial } = 
       runPartial();
     },
     
+    // Finalize and transcribe all recorded audio
     async finish() {
       const len = all.reduce((a, b) => a + b.length, 0);
       const concat = new Float32Array(len);
-      let off = 0; 
-      for (const c of all) { 
-        concat.set(c, off); 
-        off += c.length; 
-      }
-      
+      let off = 0; for (const c of all) { concat.set(c, off); off += c.length; }
       try {
-        const res = await model(concat, { 
-          language: "km", 
+        const res = await asr(concat, {
+          language: "km",  // Khmer language code
           task: "transcribe",
           chunk_length_s: 30,
-          stride_length_s: 10
+          stride_length_s: 10,
+          return_timestamps: false,
         });
         return res?.text || '';
-      } catch (error) {
-        try {
-          const res = await model(concat, { 
-            language: "en", 
-            task: "transcribe",
-            chunk_length_s: 30,
-            stride_length_s: 10
-          });
-          return res?.text || '';
-        } catch (fallbackError) {
-          return '';
-        }
+      } catch (e) {
+        console.error('[Khmer STT] Final transcription error:', e);
+        return '';
       }
     }
   };
