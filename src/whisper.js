@@ -53,6 +53,7 @@ async function loadModel() {
     );
     console.timeEnd('[khmer-whisper] load');
     console.log('[Khmer STT] Model loaded successfully');
+    _loadingPromise = null; // Clear the loading promise on success
     return _asr;
   } catch (error) {
     console.warn('[Khmer STT] Failed to load seanghay/whisper-small-khmer, trying fallback...', error);
@@ -71,9 +72,12 @@ async function loadModel() {
       );
       console.timeEnd('[khmer-whisper] load');
       console.log('[Khmer STT] Fallback model loaded');
+      _loadingPromise = null; // Clear the loading promise on success
       return _asr;
     } catch (fallbackError) {
       console.error('[Khmer STT] Both models failed to load', fallbackError);
+      _loadingPromise = null; // CRITICAL: Clear the loading promise on failure so next attempt can retry
+      _asr = null; // Clear the ASR on failure
       throw new Error('Failed to load any speech recognition model');
     }
   }
